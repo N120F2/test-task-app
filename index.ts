@@ -226,12 +226,14 @@ function generatePdf(user: IUser): Promise<string> {
         })
       doc.moveDown();
 
-      if (user.image) fs.writeFileSync(`usersImages/${user.id}.jpg`, user.image as Buffer)
-      doc.image(`usersImages/${user.id}.jpg`, {
-        align: 'center',
-        valign: 'center'
-      });
-      fs.unlinkSync(`usersImages/${user.id}.jpg`);
+      if (user.image) {
+        fs.writeFileSync(`usersImages/${user.id}.jpg`, user.image as Buffer)
+        doc.image(`usersImages/${user.id}.jpg`, {
+          align: 'center',
+          valign: 'center'
+        });
+        fs.unlinkSync(`usersImages/${user.id}.jpg`);
+      }
 
 
       doc.pipe(pdfStream);
