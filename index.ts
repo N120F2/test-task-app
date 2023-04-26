@@ -153,6 +153,8 @@ app.post("/uploadUserImage", multer({ dest: "usersImages" }).single("filedata"),
   }
   else {
     let binImage;
+
+    //!!!!!!!!!!sync
     fs.readFile(filedata.path, (err: any, data: string) => {
       if (err) {
         console.error(err);
@@ -194,10 +196,32 @@ app.post("/generatePdf", function (req: Request, res: Response) {
   User.findOne({ where: { email: email } })
     .then((user: IUser) => {
       if (!user) return res.sendStatus(404);
-      if (user.pdf) res.send({ result: true });
-      generatePdf(user);
-      res.sendStatus(200);
+      if (user.pdf) return res.send({ result: true });
+      generatePdf(user)
+        .then((path: string) => {
 
+          fs.readFile(path, (err: any, binPdf: string) => {
+            if (err) {
+              console.error(err);
+              return res.sendStatus(500);;
+            }         
+            User.update({ pdf: binPdf }, { where: { email: email } })
+              .then((changes: number[]) => {
+                console.log(`changes: ${changes}`)
+                res.status(200);
+                res.send({result:true});
+               fs.unlinkSync(path);
+              })
+              .catch((err: any) => {
+                console.log(err);
+                res.sendStatus(500);
+              });
+          });
+         
+        }).catch((err: any) => {
+          console.log(err);
+          res.sendStatus(500);
+        });
     })
     .catch((err: any) => {
       console.log(err);
@@ -205,8 +229,7 @@ app.post("/generatePdf", function (req: Request, res: Response) {
     });
 });
 function generatePdf(user: IUser): Promise<string> {
-  return new Promise((resolve, reject) => {
-
+  return new Promise((resolve, reject) => {  
     try {
       const doc = new PDFDocument({
         size: 'LEGAL',
@@ -240,7 +263,6 @@ function generatePdf(user: IUser): Promise<string> {
       doc.end();
 
       pdfStream.addListener('finish', function () {
-        // HERE PDF FILE IS DONE
         resolve(`pdfs/${user.id}.pdf`);
       });
     } catch (err: any) {
