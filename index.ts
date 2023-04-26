@@ -4,13 +4,13 @@ const dotenv = require('dotenv');
 
 //config evs
 dotenv.config();
-const port  = process.env.PORT || 8081;
-const database  = process.env.DB_NAME || "database";
-const dbLogin  = process.env.DB_LOGIN || "login";
-const dbPass  = process.env.DB_PASSWORD || "pass";
-const db_host  = process.env.DB_HOST_ADDRES || "localhost";
+const port = process.env.PORT || 8081;
+const database = process.env.DB_NAME || "database";
+const dbLogin = process.env.DB_LOGIN || "login";
+const dbPass = process.env.DB_PASSWORD || "pass";
+const db_host = process.env.DB_HOST_ADDRES || "localhost";
 //database
-const sequelize = new Sequelize(database,dbLogin , dbPass, {
+const sequelize = new Sequelize(database, dbLogin, dbPass, {
   dialect: "mysql",
   host: db_host,
   define: {
@@ -49,24 +49,94 @@ const User = sequelize.define("user", {
     defaultValue: null
   }
 });
-sequelize.sync()
-  .then((result: any) => console.log(result))
-  .catch((err: any) => console.log(err));
 
-  /*User.create({
-    email: "asdasd@sdfsdf.dsf",
-    firstName:"user1",
-    lastName: "us"  
-  }).then((res: any)=>{
-    console.log(res);
-  }).catch((err: any)=>console.log(err));*/
 //app
 const app: Express = express();
+const urlencodedParser = express.urlencoded({ extended: false });
+app.use(urlencodedParser);
+sequelize.sync()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`[server]: Server is running at http://localhost:${port}`);
+    });
+  })
+  .catch((err: any) => console.log(err));
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript Server');
 });
 
-app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+//user
+app.get("/users", function (req: Request, res: Response) {
+  User.findAll({ raw: true })
+    .then((data: object[]) => {
+      res.status(200);
+      res.set('Content-Type', 'application/json;charset=utf-8');
+      res.send(data);
+    })
+    .catch((err: any) => {
+      console.log(err);
+      res.sendStatus(500);
+    });
+});
+app.get("/user", function (req: Request, res: Response) {
+  if (!req.body) return res.sendStatus(400);
+  const id = req.query.id;
+  console.log(id)
+  User.findOne({ where: { id: id } })
+    .then((user: object) => {
+      if (!user) return res.sendStatus(404);
+      res.status(200);
+      res.set('Content-Type', 'application/json;charset=utf-8');
+      res.send(user);
+    })
+    .catch((err: any) => {
+      console.log(err);
+      res.sendStatus(500);
+    });
+});
+app.post("/createUser", function (req: Request, res: Response) {
+  if (!req.body) return res.sendStatus(400);
+  const email = req.query.email;
+  const firstName = req.query.firstName;
+  const lastName = req.query.lastName;
+  User.create({ email: email, firstName: firstName, lastName: lastName })
+    .then((user: any) => {
+      res.send({ id: user.id });
+    })
+    .catch((err: any) => {
+      console.log(err);
+      res.sendStatus(500);
+    });
+});
+app.post("/editUser", function (req: Request, res: Response) {
+  if (!req.body) return res.sendStatus(400);
+  const email = req.query.email;
+  const firstName = req.query.firstName;
+  const lastName = req.query.lastName;
+  const image = req.query.image;
+  const userid = req.query.id;
+  User.update({ email: email, firstName: firstName, lastName: lastName, image: image }, { where: { id: userid } })
+    .then((changes: number[]) => {
+      res.status(200);
+      res.send(changes[0] == 1 ? "updated" : "not updated");
+    })
+    .catch((err: any) => {
+      console.log(err);
+      res.sendStatus(500);
+    });
+});
+app.post("/deleteUser", function (req: Request, res: Response) {
+  if (!req.body) return res.sendStatus(400);
+  const userid = req.query.id;
+  User.destroy({ where: { id: userid } })
+    .then((changes: number) => {
+      res.status(200);
+      console.log(changes);
+      res.send(changes == 1 ? "deleted" : "not deleted");
+    })
+    .catch((err: any) => {
+      console.log(err);
+      res.sendStatus(500);
+    });
 });
