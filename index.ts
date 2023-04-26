@@ -1,7 +1,9 @@
 import express, { Express, Request, Response } from 'express';
+import { WriteStream } from 'fs';
 const { Sequelize, Model, DataTypes } = require('sequelize');
 const fs = require('fs');
 const multer = require("multer");
+const PDFDocument = require('pdfkit');
 
 const dotenv = require('dotenv');
 
@@ -52,6 +54,14 @@ const User = sequelize.define("user", {
     defaultValue: null
   }
 });
+interface IUser {
+  id: number,
+  email: string,
+  firstName: string,
+  lastName: string,
+  image: Buffer,
+  pdf: BinaryData
+}
 
 //app
 const app: Express = express();
@@ -118,7 +128,7 @@ app.post("/editUser", function (req: Request, res: Response) {
   if (!req.body) return res.sendStatus(400);
   const email = req.query.email;
   const firstName = req.query.firstName;
-  const lastName = req.query.lastName; 
+  const lastName = req.query.lastName;
   const userid = req.query.id;
   User.update({ email: email, firstName: firstName, lastName: lastName }, { where: { id: userid } })
     .then((changes: number[]) => {
@@ -143,25 +153,25 @@ app.post("/uploadUserImage", multer({ dest: "usersImages" }).single("filedata"),
   }
   else {
     let binImage;
-    fs.readFile(filedata.path, (err:any, data:string) => {
+    fs.readFile(filedata.path, (err: any, data: string) => {
       if (err) {
         console.error(err);
-        return  res.sendStatus(500);;
+        return res.sendStatus(500);;
       }
-      binImage = data; 
+      binImage = data;
       User.update({ image: binImage }, { where: { id: userid } })
-      .then((changes: number[]) => {
-        console.log(`changes: ${changes}`)
-        res.status(200);
-        res.send(changes[0] == 1 ? "updated" : "not updated");
-        if (filedata) fs.unlinkSync(filedata.path);
-      })
-      .catch((err: any) => {
-        console.log(err);
-        res.sendStatus(500);
-      });     
+        .then((changes: number[]) => {
+          console.log(`changes: ${changes}`)
+          res.status(200);
+          res.send(changes[0] == 1 ? "updated" : "not updated");
+          if (filedata) fs.unlinkSync(filedata.path);
+        })
+        .catch((err: any) => {
+          console.log(err);
+          res.sendStatus(500);
+        });
     });
-   
+
   }
 });
 app.post("/deleteUser", function (req: Request, res: Response) {
@@ -178,3 +188,64 @@ app.post("/deleteUser", function (req: Request, res: Response) {
       res.sendStatus(500);
     });
 });
+app.post("/generatePdf", function (req: Request, res: Response) {
+  if (!req.body) return res.sendStatus(400);
+  const email = req.query.email;
+  User.findOne({ where: { email: email } })
+    .then((user: IUser) => {
+      if (!user) return res.sendStatus(404);
+      if (user.pdf) res.send({ result: true });
+      generatePdf(user);
+      res.sendStatus(200);
+
+    })
+    .catch((err: any) => {
+      console.log(err);
+      res.sendStatus(500);
+    });
+});
+function generatePdf(user: IUser): Promise<string> {
+  return new Promise((resolve, reject) => {
+
+    try {
+      const doc = new PDFDocument({
+        size: 'LEGAL',
+        info: {
+          Title: user.firstName,
+        }
+      });
+      let pdfFile: string = `pdfs/${user.id}.pdf`;
+      let pdfStream: WriteStream = fs.createWriteStream(pdfFile);
+
+      let content: string = `First Name: ${user.firstName} Last Name: ${user.lastName}`;
+
+      doc
+        .fontSize(15)
+        .text(content, {
+          continued: true
+        })
+      doc.moveDown();
+
+      if (user.image) fs.writeFileSync(`usersImages/${user.id}.jpg`, user.image as Buffer)
+      doc.image(`usersImages/${user.id}.jpg`, {
+        align: 'center',
+        valign: 'center'
+      });
+      fs.unlinkSync(`usersImages/${user.id}.jpg`);
+
+
+      doc.pipe(pdfStream);
+      doc.end();
+
+      pdfStream.addListener('finish', function () {
+        // HERE PDF FILE IS DONE
+        resolve(`pdfs/${user.id}.pdf`);
+      });
+    } catch (err: any) {
+      console.error('MakePDF ERROR: ' + err.message);
+      reject("Error");
+    }
+
+  })
+
+}
