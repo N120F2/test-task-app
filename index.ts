@@ -118,10 +118,9 @@ app.post("/editUser", function (req: Request, res: Response) {
   if (!req.body) return res.sendStatus(400);
   const email = req.query.email;
   const firstName = req.query.firstName;
-  const lastName = req.query.lastName;
-  const image = req.query.image;
+  const lastName = req.query.lastName; 
   const userid = req.query.id;
-  User.update({ email: email, firstName: firstName, lastName: lastName, image: image }, { where: { id: userid } })
+  User.update({ email: email, firstName: firstName, lastName: lastName }, { where: { id: userid } })
     .then((changes: number[]) => {
       res.status(200);
       res.send(changes[0] == 1 ? "updated" : "not updated");
@@ -144,7 +143,7 @@ app.post("/uploadUserImage", multer({ dest: "usersImages" }).single("filedata"),
   }
   else {
     let binImage;
-    fs.readFile(filedata.path, 'utf8', (err:any, data:string) => {
+    fs.readFile(filedata.path, (err:any, data:string) => {
       if (err) {
         console.error(err);
         return  res.sendStatus(500);;
