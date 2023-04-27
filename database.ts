@@ -1,12 +1,8 @@
 import { Sequelize, Model, DataTypes } from "sequelize";
-
-//const { Sequelize, Model, DataTypes} = require('sequelize');
-const dotenv = require('dotenv');
 class Database {
     static sequelize: Sequelize
     static init() {
-        //config evs
-        dotenv.config();
+        //config evs        
         const database = process.env.DB_NAME || "database";
         const dbLogin = process.env.DB_LOGIN || "login";
         const dbPass = process.env.DB_PASSWORD || "pass";

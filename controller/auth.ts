@@ -2,13 +2,12 @@ import express, { Express, Request, Response } from 'express';
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Database = require('../database');
-
 const generateAccessToken = (id: number, login: string) => {
     const payload = {
         userId: id,
         login: login
     }
-    return jwt.sign(payload, 'Hello', {expiresIn: "1h"})
+    return jwt.sign(payload, process.env.SECRET_JWT_KEY, {expiresIn: "1h"})
 }
 class AuthController {
     static async login (req: Request, res: Response) {

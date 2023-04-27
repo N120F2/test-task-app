@@ -12,14 +12,15 @@ const passport = require('passport')
 //jwt middleware
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
-const options = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: 'Hello'
-}
+
 
 //config evs
 dotenv.config();
 const port = process.env.PORT || 8081;
+const options = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: process.env.SECRET_JWT_KEY
+}
 //database
 Database.init();
 const sequelize = Database.sequelize;
