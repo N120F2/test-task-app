@@ -4,24 +4,25 @@ const { Sequelize, Model, DataTypes } = require('sequelize');
 const fs = require('fs');
 const multer = require("multer");
 const PDFDocument = require('pdfkit');
-
 const dotenv = require('dotenv');
+const Database = require('./database');
+const AuthController = require('./controller/auth');
+
+const passport = require('passport')
+//jwt middleware
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const options = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: 'Hello'
+}
 
 //config evs
 dotenv.config();
 const port = process.env.PORT || 8081;
-const database = process.env.DB_NAME || "database";
-const dbLogin = process.env.DB_LOGIN || "login";
-const dbPass = process.env.DB_PASSWORD || "pass";
-const db_host = process.env.DB_HOST_ADDRES || "localhost";
 //database
-const sequelize = new Sequelize(database, dbLogin, dbPass, {
-  dialect: "mysql",
-  host: db_host,
-  define: {
-    timestamps: false
-  }
-});
+Database.init();
+const sequelize = Database.sequelize;
 //model
 const User = sequelize.define("user", {
   id: {
@@ -62,12 +63,47 @@ interface IUser {
   image: Buffer,
   pdf: BinaryData
 }
+//admins
+const Admin = sequelize.define("admin", {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+    allowNull: false
+  },
+  login: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+});
 
 //app
 const app: Express = express();
 const urlencodedParser = express.urlencoded({ extended: false });
 app.use(urlencodedParser);
-//app.use(multer({ dest: "usersImages" }).single("filedata"));
+//jwt
+app.use(passport.initialize());
+((passport: any) => {
+  passport.use(
+      new JwtStrategy(options, async (payload :any, done:any) => {
+          try {
+            const admin = await Admin.findOne({ where: { id: payload.userId } });
+              if(admin) {
+                  done(null, admin);
+              } else {
+                  done(null, false);
+              }
+          } catch(e) {
+              console.log(e)
+          }
+          
+      })
+  )
+})(passport)
 
 sequelize.sync()
   .then(() => {
@@ -82,7 +118,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 //user
-app.get("/users", function (req: Request, res: Response) {
+app.get("/users",passport.authenticate('jwt', {session: false}), function (req: Request, res: Response) {
   User.findAll({ raw: true })
     .then((data: object[]) => {
       res.status(200);
@@ -140,7 +176,7 @@ app.post("/editUser", function (req: Request, res: Response) {
       res.sendStatus(500);
     });
 });
-app.post("/uploadUserImage", multer({ dest: "usersImages" }).single("filedata"), function (req: Request, res: Response) {
+app.post("/uploadUserImage",passport.authenticate('jwt', {session: false}), multer({ dest: "usersImages" }).single("filedata"), function (req: Request, res: Response) {
   if (!req.body) return res.sendStatus(400);
   const userid = req.query.id;
   console.log(userid);
@@ -204,20 +240,20 @@ app.post("/generatePdf", function (req: Request, res: Response) {
             if (err) {
               console.error(err);
               return res.sendStatus(500);;
-            }         
+            }
             User.update({ pdf: binPdf }, { where: { email: email } })
               .then((changes: number[]) => {
                 console.log(`changes: ${changes}`)
                 res.status(200);
-                res.send({result:true});
-               fs.unlinkSync(path);
+                res.send({ result: true });
+                fs.unlinkSync(path);
               })
               .catch((err: any) => {
                 console.log(err);
                 res.sendStatus(500);
               });
           });
-         
+
         }).catch((err: any) => {
           console.log(err);
           res.sendStatus(500);
@@ -229,7 +265,7 @@ app.post("/generatePdf", function (req: Request, res: Response) {
     });
 });
 function generatePdf(user: IUser): Promise<string> {
-  return new Promise((resolve, reject) => {  
+  return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: 'LEGAL',
@@ -273,3 +309,4 @@ function generatePdf(user: IUser): Promise<string> {
   })
 
 }
+app.post("/login", AuthController.login);
