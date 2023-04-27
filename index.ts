@@ -7,9 +7,7 @@ const PDFDocument = require('pdfkit');
 const dotenv = require('dotenv');
 const Database = require('./database');
 const AuthController = require('./controller/auth');
-
-const passport = require('passport')
-//jwt middleware
+const passport = require('passport');
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 
@@ -25,7 +23,15 @@ const options = {
 Database.init();
 const sequelize = Database.sequelize;
 //model
-const User = sequelize.define("user", {
+class User extends Model {
+  declare id: number
+  declare email: string
+  declare firstName: string
+  declare lastName: string
+  declare image: Buffer
+  declare pdf: BinaryData
+}
+User.init({
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -55,17 +61,14 @@ const User = sequelize.define("user", {
     allowNull: true,
     defaultValue: null
   }
-});
-interface IUser {
-  id: number,
-  email: string,
-  firstName: string,
-  lastName: string,
-  image: Buffer,
-  pdf: BinaryData
-}
+}, { sequelize, modelName: 'user'});
 //admins
-const Admin = sequelize.define("admin", {
+class Admin extends Model {
+  declare id: number
+  declare login: string
+  declare password: string  
+}
+Admin.init({
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -80,8 +83,7 @@ const Admin = sequelize.define("admin", {
     type: DataTypes.STRING,
     allowNull: false
   }
-});
-
+}, { sequelize, modelName: 'admin'});
 //app
 const app: Express = express();
 const urlencodedParser = express.urlencoded({ extended: false });
@@ -90,19 +92,19 @@ app.use(urlencodedParser);
 app.use(passport.initialize());
 ((passport: any) => {
   passport.use(
-      new JwtStrategy(options, async (payload :any, done:any) => {
-          try {
-            const admin = await Admin.findOne({ where: { id: payload.userId } });
-              if(admin) {
-                  done(null, admin);
-              } else {
-                  done(null, false);
-              }
-          } catch(e) {
-              console.log(e)
-          }
-          
-      })
+    new JwtStrategy(options, async (payload: any, done: any) => {
+      try {
+        const admin = await Admin.findOne({ where: { id: payload.userId } });
+        if (admin) {
+          done(null, admin);
+        } else {
+          done(null, false);
+        }
+      } catch (e) {
+        console.log(e)
+      }
+
+    })
   )
 })(passport)
 
@@ -119,7 +121,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 //user
-app.get("/users",passport.authenticate('jwt', {session: false}), function (req: Request, res: Response) {
+app.get("/users", passport.authenticate('jwt', { session: false }), function (req: Request, res: Response) {
   User.findAll({ raw: true })
     .then((data: object[]) => {
       res.status(200);
@@ -177,7 +179,7 @@ app.post("/editUser", function (req: Request, res: Response) {
       res.sendStatus(500);
     });
 });
-app.post("/uploadUserImage",passport.authenticate('jwt', {session: false}), multer({ dest: "usersImages" }).single("filedata"), function (req: Request, res: Response) {
+app.post("/uploadUserImage", passport.authenticate('jwt', { session: false }), multer({ dest: "usersImages" }).single("filedata"), function (req: Request, res: Response) {
   if (!req.body) return res.sendStatus(400);
   const userid = req.query.id;
   console.log(userid);
@@ -231,7 +233,7 @@ app.post("/generatePdf", function (req: Request, res: Response) {
   if (!req.body) return res.sendStatus(400);
   const email = req.query.email;
   User.findOne({ where: { email: email } })
-    .then((user: IUser) => {
+    .then((user: User) => {
       if (!user) return res.sendStatus(404);
       if (user.pdf) return res.send({ result: true });
       generatePdf(user)
@@ -265,7 +267,7 @@ app.post("/generatePdf", function (req: Request, res: Response) {
       res.sendStatus(500);
     });
 });
-function generatePdf(user: IUser): Promise<string> {
+function generatePdf(user: User): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
