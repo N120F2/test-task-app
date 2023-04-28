@@ -77,3 +77,4 @@ app.post("/deleteUser", UserController.deleteUser);
 app.post("/generatePdf", UserController.generatePdf);
 //admins
 app.post("/login", AuthController.login);
+app.post("/reg", AuthController.reg);
