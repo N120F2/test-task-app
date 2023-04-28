@@ -1,89 +1,28 @@
 import express, { Express, Request, Response } from 'express';
 import { WriteStream } from 'fs';
-const { Sequelize, Model, DataTypes } = require('sequelize');
 const fs = require('fs');
 const multer = require("multer");
 const PDFDocument = require('pdfkit');
-const dotenv = require('dotenv');
-const Database = require('./database');
-const AuthController = require('./controller/auth');
 const passport = require('passport');
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
+const dotenv = require('dotenv').config();
+
+
+const Database = require('./database');
+//const AuthController = require('./controller/auth');
+import AuthController  from './controller/auth';
+import User  from './models/user';
+import Admin  from './models/admin';
 
 
 //config evs
-dotenv.config();
 const port = process.env.PORT || 8081;
 const options = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: process.env.SECRET_JWT_KEY
 }
-//database
-Database.init();
-const sequelize = Database.sequelize;
-//model
-class User extends Model {
-  declare id: number
-  declare email: string
-  declare firstName: string
-  declare lastName: string
-  declare image: Buffer
-  declare pdf: BinaryData
-}
-User.init({
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-    allowNull: false
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  firstName: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  lastName: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  image: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: null
 
-  },
-  pdf: {
-    type: DataTypes.STRING.BINARY,
-    allowNull: true,
-    defaultValue: null
-  }
-}, { sequelize, modelName: 'user'});
-//admins
-class Admin extends Model {
-  declare id: number
-  declare login: string
-  declare password: string  
-}
-Admin.init({
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-    allowNull: false
-  },
-  login: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false
-  }
-}, { sequelize, modelName: 'admin'});
 //app
 const app: Express = express();
 const urlencodedParser = express.urlencoded({ extended: false });
@@ -108,7 +47,8 @@ app.use(passport.initialize());
   )
 })(passport)
 
-sequelize.sync()
+//connect to db and start server
+Database.sequelize.sync()
   .then(() => {
     app.listen(port, () => {
       console.log(`[server]: Server is running at http://localhost:${port}`);

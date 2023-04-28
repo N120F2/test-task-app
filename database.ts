@@ -2,6 +2,7 @@ import { Sequelize, Model, DataTypes } from "sequelize";
 class Database {
     static sequelize: Sequelize
     static init() {
+        if(Database.sequelize) return
         //config evs        
         const database = process.env.DB_NAME || "database";
         const dbLogin = process.env.DB_LOGIN || "login";

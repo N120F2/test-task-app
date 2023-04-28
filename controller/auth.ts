@@ -9,7 +9,7 @@ const generateAccessToken = (id: number, login: string) => {
     }
     return jwt.sign(payload, process.env.SECRET_JWT_KEY, {expiresIn: "1h"})
 }
-class AuthController {
+export default class AuthController {
     static async login (req: Request, res: Response) {
         try {
           const { login, password } = req.query
@@ -31,4 +31,4 @@ class AuthController {
         }  
       }
 }
-module.exports = AuthController;
+//module.exports = AuthController;
