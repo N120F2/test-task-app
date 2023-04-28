@@ -1,34 +1,30 @@
-import express, { Express, Request, Response } from 'express';
+import { Request, Response } from 'express';
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Database = require('../database');
+import Admin from '../models/admin';
 const generateAccessToken = (id: number, login: string) => {
-    const payload = {
-        userId: id,
-        login: login
-    }
-    return jwt.sign(payload, process.env.SECRET_JWT_KEY, {expiresIn: "1h"})
+  const payload = {
+    userId: id,
+    login: login
+  }
+  return jwt.sign(payload, process.env.SECRET_JWT_KEY, { expiresIn: "1h" })
 }
 export default class AuthController {
-    static async login (req: Request, res: Response) {
-        try {
-          const { login, password } = req.query
-          console.log(login +" "+ password);
-          const Admin = Database.sequelize.model("admin");
-          const admin = await Admin.findOne({ where: { login: login } })
-          if (!admin) {
-            return res.json({ message: 'Login error', code: 2 })
-          }
+  static login(req: Request, res: Response) {   
+      const { login, password } = req.query;
+      Admin.findOne({ where: { login: login } })
+        .then((admin: Admin) => {
+          if (!admin) return res.sendStatus(404);
           const validPassword = bcrypt.compareSync(password, admin.password)
           if (!validPassword) {
-            return res.json({ message: 'Password error', code: 2 })
+            return res.sendStatus(403);
           }
           const token = generateAccessToken(admin.id, admin.login);
           return res.json({ token })
-        } catch (e) {
-          console.log(e)
+        })
+        .catch((err: any) => {
+          console.log(err)
           res.status(400).json({ message: 'Login error' })
-        }  
-      }
+        });   
+  }
 }
-//module.exports = AuthController;

@@ -76,9 +76,7 @@ export default class UserController {
       res.send("file not uploaded");
     }
     else {
-      let binImage;
-  
-      //!!!!!!!!!!sync
+      let binImage;       
       fs.readFile(filedata.path, (err: any, data: string) => {
         if (err) {
           console.error(err);
