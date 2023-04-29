@@ -66,15 +66,15 @@ app.get('/', (req: Request, res: Response) => {
 
 //user
 app.get("/users", passport.authenticate('jwt', { session: false }), UserController.users);
-app.get("/user", UserController.user);
-app.post("/createUser", UserController.createUser);
-app.post("/editUser", UserController.editUser);
+app.get("/user", passport.authenticate('jwt', { session: false }), UserController.user);
+app.post("/createUser", passport.authenticate('jwt', { session: false }), UserController.createUser);
+app.post("/editUser", passport.authenticate('jwt', { session: false }), UserController.editUser);
 app.post("/uploadUserImage",
   passport.authenticate('jwt', { session: false }),
   multer({ dest: "usersImages" }).single("filedata"),
   UserController.uploadUserImage);
-app.post("/deleteUser", UserController.deleteUser);
-app.post("/generatePdf", UserController.generatePdf);
+app.post("/deleteUser", passport.authenticate('jwt', { session: false }), UserController.deleteUser);
+app.post("/generatePdf", passport.authenticate('jwt', { session: false }), UserController.generatePdf);
 //admins
 app.post("/login", AuthController.login);
 app.post("/reg", AuthController.reg);
