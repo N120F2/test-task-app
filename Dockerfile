@@ -4,5 +4,5 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 EXPOSE 8080
-CMD [ "npm", "build" ]
-CMD [ "npm", "start" ]
+RUN npm run build
+CMD [ "node", "dist/index.js" ]
