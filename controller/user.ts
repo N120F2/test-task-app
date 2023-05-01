@@ -118,7 +118,7 @@ export default class UserController {
     User.findOne({ where: { email: email } })
       .then((user: User) => {
         if (!user) return res.sendStatus(404);
-        if (user.pdf) return res.send({ result: true });
+        //if (user.pdf) return res.send({ result: true });
         UserController.generatePdfFile(user)
           .then((path: string) => {
   

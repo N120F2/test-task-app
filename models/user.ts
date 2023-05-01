@@ -31,13 +31,13 @@ User.init({
         allowNull: false
     },
     image: {
-        type: DataTypes.STRING,
+        type: DataTypes.BLOB('long'),
         allowNull: true,
         defaultValue: null
 
     },
     pdf: {
-        type: DataTypes.STRING.BINARY,
+        type: DataTypes.BLOB('long'),
         allowNull: true,
         defaultValue: null
     }
